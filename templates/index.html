@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IT Support</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/assets/css/style.css" type="text/css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Electrolize&display=swap" rel="stylesheet">
+    <link rel="icon" href="/static/assets/img/favicon.ico">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.16.2/axios.js"></script>
+</head>
+
+<body>
+
+    <div id="site">
+
+        <!- Main menu ->
+        <div v-if="display === 0">
+
+            <header>
+
+                <div class="main-header middle-margin">
+
+                    <div class="main-header_left">
+                        <a href="/">
+                            <img src="/static/assets/img/inno.png" height="45px" alt="logo">
+                        </a>
+                        <h1 v-text="interface[0]"></h1> <!- IT Support ->
+                    </div>
+
+                    <div v-if="Object.keys(user).length === 0" class="main-header_right">
+                        <h3 v-text="interface[1]"></h3> <!- Please Login ->
+                        <span>en</span>
+                        <img @click="changeLanguage" :src="lng_image" id="language" alt="button" height="25">
+                        <span>ru</span>
+                        <a href="/login">
+                            <img src="/static/assets/img/user.png" height="45px" alt="profile">
+                        </a>
+                    </div>
+
+                    <div v-else class="main-header_right">
+                        <span>en</span>
+                        <img @click="changeLanguage" :src="lng_image" id="language" alt="button" height="25">
+                        <span>ru</span>
+                        <a @click="logOut" href="/login">
+                            <img src="/static/assets/img/user.png" height="45px" alt="profile">
+                        </a>
+                    </div>
+                </div>
+
+                <hr class="green-hr">
+
+                <div class="main-header_links">
+                    <a @click="setMainMenu(0)" id="link0" :class="{'green-color' :(main_menu === 0)}" v-text="interface[2]"></a> <!- New Ticket ->
+                    <a @click="setMainMenu(1)" id="link1" :class="{'green-color' :(main_menu === 1)}" v-text="interface[3]"></a> <!- Opened Tickets ->
+                    <a @click="setMainMenu(2)" id="link2" :class="{'green-color' :(main_menu === 2)}" v-text="interface[4]"></a> <!- Resolved Tickets ->
+                    <a @click="setMainMenu(3)" id="link3" class="last-element" :class="{'green-color' :(main_menu === 3)}" v-text="interface[5]"></a> <!- All Tickets ->
+                </div>
+
+                <hr class="green-hr">
+
+            </header>
+
+            <!- Widgets ->
+            <main v-if="main_menu === 0" id="main" class="grid-menu big-margin">
+
+                <div v-for="widget in widgets" class="grid-element border">
+                    <h4 v-text='widget.id + ". " + widget.name'></h4>
+                    <h6 v-text="widget.description" class="grid-description-text"></h6>
+                    <a v-on:click="setDisplay(widget.id)" class="grid-widget-link" v-text="interface[6]"></a> <!- Report Issue ->
+                </div>
+
+            </main>
+
+            <!- Opened Tickets ->
+            <main v-if="main_menu === 1" class="big-margin">
+
+                <div class="ticket_number">
+                    <span v-text="interface[7]"></span> <!- Number of tickets ->
+                    <a @click="setTicketNumber(10)">10</a>
+                    <a @click="setTicketNumber(20)">20</a>
+                    <a @click="setTicketNumber(50)">50</a>
+                </div>
+
+                <div class="ticket_table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="i in openTickets.length" v-if="((i - 1) >= ticketFirstId && (i - 1) < (ticketFirstId + ticket_number))" v-bind:class="{'white_colored' :isEven(i - 1)}">
+                                <td>
+                                    <a class="ticket_table_date" :href="'http://10.90.138.10/otrs/customer.pl?Action=CustomerTicketZoom;TicketNumber=' + getData(openTickets[i - 1].time)" target="_blank">
+                                        <span v-text="getData(openTickets[i - 1].time)"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <span v-text="openTickets[i - 1].title + ' '" class="ticket_table_title"></span>
+                                </td>
+                                <td>
+                                    <span>-</span>
+                                    <span v-text="openTickets[i - 1].body" class="ticket_table_body"></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="ticket_table_buttons">
+                    <button @click="setPage(1)" v-if="pageID > 2" class="ticket_table_buttons__small">1</button>
+                    <span v-if="pageID > 3">...</span>
+                    <button @click="setPage(pageID - 1)" v-if="pageID > 1" v-text="pageID - 1" class="ticket_table_buttons__small"></button>
+                    <button @click="setPage(pageID)" v-text="pageID" class="ticket_table_buttons__big"></button>
+                    <button @click="setPage(pageID + 1)" v-if="pageID + 1 <= pageNumbers" v-text="pageID + 1" class="ticket_table_buttons__small"></button>
+                    <span v-if="pageID + 2 < pageNumbers">...</span>
+                    <button @click="setPage(pageNumbers)" v-if="pageID + 1 < pageNumbers" v-text="pageNumbers" class="ticket_table_buttons__small"></button>
+                </div>
+
+            </main>
+
+            <!- Closed Tickets ->
+            <main v-if="main_menu === 2" class="big-margin">
+
+                <div class="ticket_number">
+                    <span v-text="interface[7]"></span> <!- Number of tickets ->
+                    <a @click="setTicketNumber(10)">10</a>
+                    <a @click="setTicketNumber(20)">20</a>
+                    <a @click="setTicketNumber(50)">50</a>
+                </div>
+
+                <div class="ticket_table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="i in closedTickets.length" v-if="((i - 1) >= ticketFirstId && (i - 1) < (ticketFirstId + ticket_number))" v-bind:class="{'white_colored' :isEven(i - 1)}">
+                                <td>
+                                    <a class="ticket_table_date" :href="'http://10.90.138.10/otrs/customer.pl?Action=CustomerTicketZoom;TicketNumber=' + getData(openTickets[i - 1].time)" target="_blank">
+                                        <span v-text="getData(openTickets[i - 1].time)"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <span v-text="closedTickets[i - 1].title + ' '" class="ticket_table_title"></span>
+                                </td>
+                                <td>
+                                    <span>-</span>
+                                    <span v-text="closedTickets[i - 1].body" class="ticket_table_body"></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="ticket_table_buttons">
+                    <button @click="setPage(1)" v-if="pageID > 2" class="ticket_table_buttons__small">1</button>
+                    <span v-if="pageID > 3">...</span>
+                    <button @click="setPage(pageID - 1)" v-if="pageID > 1" v-text="pageID - 1" class="ticket_table_buttons__small"></button>
+                    <button @click="setPage(pageID)" v-text="pageID" class="ticket_table_buttons__big"></button>
+                    <button @click="setPage(pageID + 1)" v-if="pageID + 1 <= pageNumbers" v-text="pageID + 1" class="ticket_table_buttons__small"></button>
+                    <span v-if="pageID + 2 < pageNumbers">...</span>
+                    <button @click="setPage(pageNumbers)" v-if="pageID + 1 < pageNumbers" v-text="pageNumbers" class="ticket_table_buttons__small"></button>
+                </div>
+
+            </main>
+
+            <!- All Tickets ->
+            <main v-if="main_menu === 3" class="big-margin">
+
+                <div class="ticket_number">
+                    <span v-text="interface[7]"></span> <!- Number of tickets ->
+                    <a @click="setTicketNumber(10)">10</a>
+                    <a @click="setTicketNumber(20)">20</a>
+                    <a @click="setTicketNumber(50)">50</a>
+                </div>
+
+                <div class="ticket_table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="i in tickets.length" v-if="((i - 1) >= ticketFirstId && (i - 1) < (ticketFirstId + ticket_number))" v-bind:class="{'white_colored' :isEven(i - 1)}">
+                                <td>
+                                    <a class="ticket_table_date" :href="'http://10.90.138.10/otrs/customer.pl?Action=CustomerTicketZoom;TicketNumber=' + getData(openTickets[i - 1].time)" target="_blank">
+                                        <span v-text="getData(openTickets[i - 1].time)"></span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <span v-text="tickets[i - 1].title + ' '" class="ticket_table_title"></span>
+                                </td>
+                                <td>
+                                    <span>-</span>
+                                    <span v-text="tickets[i - 1].body" class="ticket_table_body"></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="ticket_table_buttons">
+                    <button @click="setPage(1)" v-if="pageID > 2" class="ticket_table_buttons__small">1</button>
+                    <span v-if="pageID > 3">...</span>
+                    <button @click="setPage(pageID - 1)" v-if="pageID > 1" v-text="pageID - 1" class="ticket_table_buttons__small"></button>
+                    <button @click="setPage(pageID)" v-text="pageID" class="ticket_table_buttons__big"></button>
+                    <button @click="setPage(pageID + 1)" v-if="pageID + 1 <= pageNumbers" v-text="pageID + 1"class="ticket_table_buttons__small"></button>
+                    <span v-if="pageID + 2 < pageNumbers">...</span>
+                    <button @click="setPage(pageNumbers)" v-if="pageID + 1 < pageNumbers" v-text="pageNumbers" class="ticket_table_buttons__small"></button>
+                </div>
+
+            </main>
+
+        </div>
+
+        <!- Request ->
+
+        <div v-for="widget in widgets">
+            <div v-if="display === widget.id">
+
+                <header class="main-header middle-margin">
+
+                    <div class="main-header_left">
+                        <a v-on:click="setDisplay(0)">
+                            <img src="/static/assets/img/arrow-left.png" alt="arrow" height="45">
+                        </a>
+                        <h1 v-text="widget.name"></h1>
+                    </div>
+
+                    <div class="main-header_right">
+                        <span>en</span>
+                        <img @click="changeLanguage" :src="lng_image" id="language" alt="button" height="30">
+                        <span>ru</span>
+                    </div>
+                </header>
+
+                <hr class="green-hr">
+
+                <main class="big-margin">
+
+                    <div v-if="!requestStatus" class="widget-body">
+
+                        <div class="faq">
+                            <h2 class="big-margin">FAQ</h2>
+                            <div v-if="faq_list">
+                                <div v-for="i in widget.faq">
+                                    <div class="faq_title">
+                                        <h3 v-text="i.question"></h3>
+                                        <a @click="setQuestion(i.id); addFAQquestion(i.question)">
+                                            <img src="/static/assets/img/chevron-down.png" alt="chevron">
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else>
+                                <div class="faq_answer">
+                                    <h4 v-text="widget.faq[question_id].question" class="small-margin"></h4>
+                                    <div class="faq_answer_title middle-margin">
+                                        <a @click="setFAQlist">
+                                            <img src="/static/assets/img/arrow-left.png" alt="arrow" height="35">
+                                        </a>
+                                        <h3 v-if="!isLink(widget.faq[question_id].answers[answer_id])" v-text="widget.faq[question_id].answers[answer_id]"></h3>
+                                        <a v-else :href="widget.faq[question_id].answers[answer_id]" v-text="widget.faq[question_id].answers[answer_id]" target="_blank"></a>
+                                    </div>
+                                    <div class="faq_buttons middle-margin">
+                                        <button @click="addFAQanswer(widget.faq[question_id].answers[answer_id] + ' No'); setFAQlist();" class="button" v-text="interface[8]"></button> <!- No ->
+                                        <button @click="addFAQanswer(widget.faq[question_id].answers[answer_id] + ' Yes'); setNextAnswer();" class="button" v-text="interface[9]"></button> <!- Yes ->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="request-body">
+
+                            <h2 class="middle-margin" v-text="interface[10]"></h2> <!- Fill the form ->
+
+                            <div class="request-field" v-for="field in widget.fields">
+                                <h3 v-text="field.title"></h3>
+                                <input v-model.trim="requestData.fieldsValue[widget.fields.indexOf(field)].value" v-if='field.type === "input"' v-bind:placeholder="field.placeholder" class="input border small-margin _req">
+                                <textarea v-model.trim="requestData.fieldsValue[widget.fields.indexOf(field)].value" v-if='field.type === "textarea"' v-bind:placeholder="field.placeholder" class="textarea border small-margin _req"></textarea>
+                            </div>
+
+                            <div v-show="requestData.faq.length !== 0" class="request-faq">
+                                <h3>FAQ</h3>
+                                <h4 v-for="i in requestData.faq" class="middle-margin" v-text="i"></h4>
+                            </div>
+
+                            <h3 v-text="interface[11]"></h3> <!- Files ->
+                            <input type="file" @change="onFileSelected" class="small-margin" multiple>
+
+                            <button v-on:click="setRequest()" class="button" id="report_button" v-text="interface[12]"></button> <!- Report ->
+                        </div>
+
+                    </div>
+
+                    <div v-if="requestStatus" class="successful">
+                        <img src="/static/assets/img/check-circle.png" alt="circle">
+                        <h3 v-text="interface[13]"></h3> <!- Your issue ... ->
+                        <h5 v-text="interface[14]"></h5> <!- We will ... ->
+                    </div>
+
+                </main>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+<script src="/static/assets/js/script.js"></script>
+</html>
